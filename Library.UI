@@ -1,159 +1,245 @@
--- UILibrary.lua (corrigido e aprimorado)
+-- UILibrary.lua (com PlayerInfo + Search + Spectate integrados)
 
 local UILibrary = {}
-UILibrary.__index = UILibrary
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
 local Camera = workspace.CurrentCamera
 
--- Criação suave de Drag
-local function MakeDraggable(frame)
-	local dragging, dragInput, dragStart, startPos
-
-	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = input.Position
-			startPos = frame.Position
-
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then dragging = false end
-			end)
-		end
-	end)
-
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-	end)
-
-	RunService.RenderStepped:Connect(function()
-		if dragging and dragInput then
-			local delta = UserInputService:GetMouseLocation() - dragStart
-			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		end
-	end)
+local function CreateInstance(class, props)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        obj[k] = v
+    end
+    return obj
 end
 
--- Cria a Janela
 function UILibrary:CreateWindow(title)
-	local ScreenGui = Instance.new("ScreenGui")
-	ScreenGui.Name = "CustomUILib"
-	ScreenGui.ResetOnSpawn = false
-	ScreenGui.IgnoreGuiInset = true
-	ScreenGui.Parent = game.CoreGui
+    local ScreenGui = CreateInstance("ScreenGui", {
+        Name = "CustomUI",
+        ResetOnSpawn = false,
+        Parent = game:GetService("CoreGui")
+    })
 
-	local MainFrame = Instance.new("Frame")
-	MainFrame.Name = "MainFrame"
-	MainFrame.Size = UDim2.new(0, 600, 0, 400)
-	MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-	MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-	MainFrame.BorderSizePixel = 0
-	MainFrame.Active = true
-	MainFrame.Parent = ScreenGui
-	MakeDraggable(MainFrame)
+    local MainFrame = CreateInstance("Frame", {
+        Name = "MainFrame",
+        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        Size = UDim2.new(0, 600, 0, 400),
+        Position = UDim2.new(0.5, -300, 0.5, -200),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BorderSizePixel = 0,
+        Parent = ScreenGui
+    })
 
-	-- Toggle UI com RightCtrl
-	UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if input.KeyCode == Enum.KeyCode.RightControl then
-			MainFrame.Visible = not MainFrame.Visible
-		end
-	end)
+    local UIPadding = CreateInstance("UIPadding", {
+        PaddingLeft = UDim.new(0, 160),
+        Parent = MainFrame
+    })
 
-	-- Título
-	local TitleBar = Instance.new("TextLabel")
-	TitleBar.Size = UDim2.new(1, 0, 0, 30)
-	TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	TitleBar.Text = title or "Window"
-	TitleBar.TextColor3 = Color3.new(1, 1, 1)
-	TitleBar.Font = Enum.Font.Arcade
-	TitleBar.TextSize = 20
-	TitleBar.Parent = MainFrame
+    local Title = CreateInstance("TextLabel", {
+        Text = title or "Window",
+        Font = Enum.Font.GothamBold,
+        TextSize = 20,
+        TextColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 30),
+        Parent = MainFrame
+    })
 
-	-- Área de Botões das Abas
-	local TabButtons = Instance.new("Frame")
-	TabButtons.Size = UDim2.new(0, 120, 1, -30)
-	TabButtons.Position = UDim2.new(0, 0, 0, 30)
-	TabButtons.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	TabButtons.ZIndex = 2
-	TabButtons.Parent = MainFrame
+    local TabButtons = CreateInstance("Frame", {
+        Name = "TabButtons",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 150, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        ZIndex = 2,
+        Parent = MainFrame
+    })
 
-	-- Área de Conteúdo
-	local ContentFrame = Instance.new("Frame")
-	ContentFrame.Size = UDim2.new(1, -250, 1, -30)
-	ContentFrame.Position = UDim2.new(0, 120, 0, 30)
-	ContentFrame.BackgroundTransparency = 1
-	ContentFrame.Name = "ContentFrame"
-	ContentFrame.ClipsDescendants = true
-	ContentFrame.Parent = MainFrame
+    local ContentFrame = CreateInstance("Frame", {
+        Name = "ContentFrame",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -160, 1, -40),
+        Position = UDim2.new(0, 160, 0, 40),
+        Parent = MainFrame
+    })
 
-	-- Painel de Infos do Player
-	local InfoPanel = Instance.new("Frame")
-	InfoPanel.Size = UDim2.new(0, 130, 1, -30)
-	InfoPanel.Position = UDim2.new(1, -130, 0, 30)
-	InfoPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	InfoPanel.Parent = MainFrame
+    local PlayerInfoPanel = CreateInstance("Frame", {
+        Name = "PlayerInfoPanel",
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        Size = UDim2.new(0, 150, 0, 400),
+        Position = UDim2.new(0, -150, 0, 0),
+        BorderSizePixel = 0,
+        Parent = MainFrame
+    })
 
-	local InfoTitle = Instance.new("TextLabel")
-	InfoTitle.Size = UDim2.new(1, 0, 0, 20)
-	InfoTitle.Text = "PLAYER INFO"
-	InfoTitle.TextColor3 = Color3.new(1, 1, 1)
-	InfoTitle.BackgroundTransparency = 1
-	InfoTitle.Font = Enum.Font.Arcade
-	InfoTitle.TextSize = 14
-	InfoTitle.Parent = InfoPanel
+    local Username = CreateInstance("TextLabel", {
+        Name = "Username",
+        Text = LocalPlayer.Name,
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 20),
+        Position = UDim2.new(0, 0, 0, 60),
+        Parent = PlayerInfoPanel
+    })
 
-	-- Aqui vamos adicionar os dados do player e o sistema de busca depois
+    local HealthLabel = CreateInstance("TextLabel", {
+        Name = "HealthLabel",
+        Text = "Health: 100",
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 20),
+        Position = UDim2.new(0, 0, 0, 80),
+        Parent = PlayerInfoPanel
+    })
 
-	local self = setmetatable({}, UILibrary)
-	self.MainFrame = MainFrame
-	self.Tabs = {}
-	self.CurrentTab = nil
-	self.TabButtons = TabButtons
-	self.ContentFrame = ContentFrame
-	self.InfoPanel = InfoPanel
+    local SpectateToggle = CreateInstance("TextButton", {
+        Text = "Spectate",
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+        TextColor3 = Color3.new(1, 1, 1),
+        Size = UDim2.new(1, -10, 0, 30),
+        Position = UDim2.new(0, 5, 0, 110),
+        Parent = PlayerInfoPanel
+    })
 
-	return self
-end
+    local SearchBox = CreateInstance("TextBox", {
+        PlaceholderText = "Search Player",
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        TextColor3 = Color3.new(1, 1, 1),
+        Size = UDim2.new(1, -10, 0, 30),
+        Position = UDim2.new(0, 5, 0, 160),
+        Parent = PlayerInfoPanel
+    })
 
--- Cria uma nova aba
-function UILibrary:CreateTab(name)
-	local TabButton = Instance.new("TextButton")
-	TabButton.Size = UDim2.new(1, 0, 0, 30)
-	TabButton.Text = name
-	TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	TabButton.TextColor3 = Color3.new(1, 1, 1)
-	TabButton.Font = Enum.Font.Arcade
-	TabButton.TextSize = 18
-	TabButton.Parent = self.TabButtons
+    local SelectedPlayerInfo = CreateInstance("TextLabel", {
+        Text = "No player selected",
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        TextWrapped = true,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -10, 0, 100),
+        Position = UDim2.new(0, 5, 0, 200),
+        Parent = PlayerInfoPanel
+    })
 
-	local TabContent = Instance.new("ScrollingFrame")
-	TabContent.Size = UDim2.new(1, 0, 1, 0)
-	TabContent.CanvasSize = UDim2.new(0, 0, 10, 0)
-	TabContent.BackgroundTransparency = 1
-	TabContent.Visible = false
-	TabContent.ScrollBarThickness = 4
-	TabContent.Parent = self.ContentFrame
+    -- Drag logic
+    local dragging, dragInput, dragStart, startPos
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
 
-	TabButton.MouseButton1Click:Connect(function()
-		if self.CurrentTab then
-			self.CurrentTab.Visible = false
-		end
-		self.CurrentTab = TabContent
-		TabContent.Visible = true
-	end)
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
 
-	self.Tabs[name] = { Button = TabButton, Content = TabContent }
+    MainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
 
-	if not self.CurrentTab then
-		self.CurrentTab = TabContent
-		TabContent.Visible = true
-	end
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
 
-	return TabContent
+    -- Health update loop
+    RunService.RenderStepped:Connect(function()
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+        if humanoid then
+            HealthLabel.Text = "Health: " .. math.floor(humanoid.Health)
+        end
+    end)
+
+    local spectating = false
+    local spectatedPlayer = nil
+
+    SpectateToggle.MouseButton1Click:Connect(function()
+        spectating = not spectating
+        if spectating and spectatedPlayer and spectatedPlayer.Character then
+            Camera.CameraSubject = spectatedPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+        else
+            Camera.CameraSubject = LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+        end
+    end)
+
+    SearchBox.FocusLost:Connect(function()
+        local text = SearchBox.Text:lower()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and (player.Name:lower():find(text) or player.DisplayName:lower():find(text)) then
+                spectatedPlayer = player
+                SelectedPlayerInfo.Text = string.format("%s\nID: %s", player.Name, player.UserId)
+                if spectating then
+                    Camera.CameraSubject = player.Character and player.Character:FindFirstChildWhichIsA("Humanoid")
+                end
+                break
+            end
+        end
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        if player == spectatedPlayer then
+            spectatedPlayer = nil
+            spectating = false
+            SelectedPlayerInfo.Text = "No player selected"
+            Camera.CameraSubject = LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+        end
+    end)
+
+    return {
+        MainFrame = MainFrame,
+        AddTab = function(self, name)
+            local TabButton = CreateInstance("TextButton", {
+                Text = name,
+                Font = Enum.Font.Gotham,
+                TextSize = 14,
+                TextColor3 = Color3.new(1, 1, 1),
+                BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+                Size = UDim2.new(1, -10, 0, 30),
+                Position = UDim2.new(0, 5, 0, #TabButtons:GetChildren() * 35),
+                Parent = TabButtons
+            })
+
+            local TabFrame = CreateInstance("Frame", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Visible = false,
+                Parent = ContentFrame
+            })
+
+            TabButton.MouseButton1Click:Connect(function()
+                for _, v in ipairs(ContentFrame:GetChildren()) do
+                    if v:IsA("Frame") then
+                        v.Visible = false
+                    end
+                end
+                TabFrame.Visible = true
+            end)
+
+            return TabFrame
+        end
+    }
 end
 
 return UILibrary
