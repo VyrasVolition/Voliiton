@@ -1,4 +1,4 @@
--- UILibrary.lua (versão modular atualizada)
+-- UILibrary.lua (versão modular avançada)
 
 local UILibrary = {}
 UILibrary.__index = UILibrary
@@ -6,7 +6,9 @@ UILibrary.__index = UILibrary
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
+-- Cria janela principal
 function UILibrary:CreateWindow(title)
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "CustomUILib"
@@ -45,18 +47,146 @@ function UILibrary:CreateWindow(title)
 	ContentFrame.Name = "ContentFrame"
 	ContentFrame.Parent = MainFrame
 
+	local PlayerPanel = Instance.new("Frame")
+	PlayerPanel.Size = UDim2.new(0, 150, 1, 0)
+	PlayerPanel.Position = UDim2.new(1, -150, 0, 0)
+	PlayerPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	PlayerPanel.BorderSizePixel = 0
+	PlayerPanel.Parent = MainFrame
+
+	local PlayerAvatar = Instance.new("ImageLabel")
+	PlayerAvatar.Size = UDim2.new(0, 60, 0, 60)
+	PlayerAvatar.Position = UDim2.new(0.5, -30, 0, 10)
+	PlayerAvatar.BackgroundTransparency = 1
+	PlayerAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=420&height=420&format=png"
+	PlayerAvatar.Parent = PlayerPanel
+
+	local PlayerName = Instance.new("TextLabel")
+	PlayerName.Size = UDim2.new(1, -10, 0, 20)
+	PlayerName.Position = UDim2.new(0, 5, 0, 75)
+	PlayerName.BackgroundTransparency = 1
+	PlayerName.Text = LocalPlayer.Name .. " (" .. LocalPlayer.DisplayName .. ")"
+	PlayerName.TextColor3 = Color3.new(1, 1, 1)
+	PlayerName.Font = Enum.Font.Arcade
+	PlayerName.TextSize = 14
+	PlayerName.Parent = PlayerPanel
+
+	local PlayerInfo = Instance.new("TextLabel")
+	PlayerInfo.Size = UDim2.new(1, -10, 0, 50)
+	PlayerInfo.Position = UDim2.new(0, 5, 0, 100)
+	PlayerInfo.BackgroundTransparency = 1
+	PlayerInfo.TextColor3 = Color3.new(1, 1, 1)
+	PlayerInfo.Font = Enum.Font.Arcade
+	PlayerInfo.TextSize = 14
+	PlayerInfo.TextWrapped = true
+	PlayerInfo.Text = "ID: " .. LocalPlayer.UserId .. "\nHP: N/A\nTime: 0s"
+	PlayerInfo.Parent = PlayerPanel
+
+	local elapsed = 0
+	RunService.RenderStepped:Connect(function(dt)
+		elapsed += dt
+		local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		local hp = humanoid and math.floor(humanoid.Health) or "N/A"
+		PlayerInfo.Text = "ID: " .. LocalPlayer.UserId .. "\nHP: " .. hp .. "\nTime: " .. math.floor(elapsed) .. "s"
+	end)
+
+	local SearchBox = Instance.new("TextBox")
+	SearchBox.Size = UDim2.new(1, -10, 0, 25)
+	SearchBox.Position = UDim2.new(0, 5, 1, -60)
+	SearchBox.PlaceholderText = "Search player..."
+	SearchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	SearchBox.TextColor3 = Color3.new(1, 1, 1)
+	SearchBox.Font = Enum.Font.Arcade
+	SearchBox.TextSize = 14
+	SearchBox.Text = ""
+	SearchBox.ClearTextOnFocus = false
+	SearchBox.Parent = PlayerPanel
+
+	local SpectateButton = Instance.new("TextButton")
+	SpectateButton.Size = UDim2.new(1, -10, 0, 25)
+	SpectateButton.Position = UDim2.new(0, 5, 1, -30)
+	SpectateButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	SpectateButton.TextColor3 = Color3.new(1, 1, 1)
+	SpectateButton.Font = Enum.Font.Arcade
+	SpectateButton.TextSize = 14
+	SpectateButton.Text = "Spectate"
+	SpectateButton.Parent = PlayerPanel
+
+	local cam = workspace.CurrentCamera
+	local spectating = false
+	local currentTarget = LocalPlayer
+
+	local function updateTarget(name)
+		for _, plr in pairs(Players:GetPlayers()) do
+			if string.find(string.lower(plr.Name), string.lower(name)) or string.find(string.lower(plr.DisplayName), string.lower(name)) then
+				currentTarget = plr
+				PlayerAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. plr.UserId .. "&width=420&height=420&format=png"
+				PlayerName.Text = plr.Name .. " (" .. plr.DisplayName .. ")"
+				return
+			end
+		end
+	end
+
+	SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+		updateTarget(SearchBox.Text)
+	end)
+
+	SpectateButton.MouseButton1Click:Connect(function()
+		spectating = not spectating
+		SpectateButton.Text = spectating and "Unspectate" or "Spectate"
+		if spectating then
+			RunService:BindToRenderStep("Spectate", Enum.RenderPriority.Camera.Value + 1, function()
+				if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
+					cam.CFrame = CFrame.new(cam.CFrame.Position, currentTarget.Character.HumanoidRootPart.Position)
+				end
+			end)
+		else
+			RunService:UnbindFromRenderStep("Spectate")
+		end
+	end)
+
 	local self = setmetatable({}, UILibrary)
 	self.Tabs = {}
 	self.CurrentTab = nil
 	self.TabButtons = TabButtons
 	self.ContentFrame = ContentFrame
-	self.MainFrame = MainFrame
 
-	self:CreatePlayerPanel()
+	function self:CreateButton(tabContent, text, callback)
+		local Button = Instance.new("TextButton")
+		Button.Size = UDim2.new(1, -10, 0, 30)
+		Button.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren() * 32)
+		Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+		Button.TextColor3 = Color3.new(1, 1, 1)
+		Button.Text = text
+		Button.Font = Enum.Font.Arcade
+		Button.TextSize = 16
+		Button.Parent = tabContent
+		Button.MouseButton1Click:Connect(callback)
+	end
+
+	function self:CreateToggle(tabContent, text, callback)
+		local Toggle = Instance.new("TextButton")
+		Toggle.Size = UDim2.new(1, -10, 0, 30)
+		Toggle.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren() * 32)
+		Toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+		Toggle.TextColor3 = Color3.new(1, 1, 1)
+		Toggle.Text = "[ OFF ] " .. text
+		Toggle.Font = Enum.Font.Arcade
+		Toggle.TextSize = 16
+		Toggle.Parent = tabContent
+
+		local state = false
+		Toggle.MouseButton1Click:Connect(function()
+			state = not state
+			Toggle.Text = (state and "[ ON  ] " or "[ OFF ] ") .. text
+			if callback then callback(state) end
+		end)
+	end
 
 	return self
 end
 
+-- Cria uma nova aba
 function UILibrary:CreateTab(name)
 	local TabButton = Instance.new("TextButton")
 	TabButton.Size = UDim2.new(1, 0, 0, 30)
@@ -91,90 +221,6 @@ function UILibrary:CreateTab(name)
 	end
 
 	return TabContent
-end
-
-function UILibrary:CreateToggle(tabContent, text, callback)
-	local Toggle = Instance.new("TextButton")
-	Toggle.Size = UDim2.new(1, -10, 0, 30)
-	Toggle.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren() * 32)
-	Toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-	Toggle.TextColor3 = Color3.new(1, 1, 1)
-	Toggle.Text = "[ OFF ] " .. text
-	Toggle.Font = Enum.Font.Arcade
-	Toggle.TextSize = 16
-	Toggle.Parent = tabContent
-
-	local state = false
-	Toggle.MouseButton1Click:Connect(function()
-		state = not state
-		Toggle.Text = (state and "[ ON  ] " or "[ OFF ] ") .. text
-		if callback then callback(state) end
-	end)
-end
-
-function UILibrary:CreateButton(tabContent, text, callback)
-	local Button = Instance.new("TextButton")
-	Button.Size = UDim2.new(1, -10, 0, 30)
-	Button.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren() * 32)
-	Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-	Button.TextColor3 = Color3.new(1, 1, 1)
-	Button.Text = text
-	Button.Font = Enum.Font.Arcade
-	Button.TextSize = 16
-	Button.Parent = tabContent
-
-	Button.MouseButton1Click:Connect(function()
-		if callback then callback() end
-	end)
-end
-
-function UILibrary:CreatePlayerPanel()
-	local Panel = Instance.new("Frame")
-	Panel.Name = "PlayerInfo"
-	Panel.Size = UDim2.new(0, 120, 0, 120)
-	Panel.Position = UDim2.new(1, 10, 0, 30)
-	Panel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	Panel.Parent = self.MainFrame
-
-	local Avatar = Instance.new("ImageLabel")
-	Avatar.Size = UDim2.new(0, 60, 0, 60)
-	Avatar.Position = UDim2.new(0.5, -30, 0, 5)
-	Avatar.BackgroundTransparency = 1
-	Avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=420&height=420&format=png"
-	Avatar.Parent = Panel
-
-	local Username = Instance.new("TextLabel")
-	Username.Size = UDim2.new(1, 0, 0, 20)
-	Username.Position = UDim2.new(0, 0, 0, 70)
-	Username.BackgroundTransparency = 1
-	Username.Text = LocalPlayer.Name
-	Username.TextColor3 = Color3.new(1, 1, 1)
-	Username.Font = Enum.Font.Arcade
-	Username.TextSize = 14
-	Username.Parent = Panel
-
-	local HealthLabel = Instance.new("TextLabel")
-	HealthLabel.Size = UDim2.new(1, 0, 0, 20)
-	HealthLabel.Position = UDim2.new(0, 0, 0, 90)
-	HealthLabel.BackgroundTransparency = 1
-	HealthLabel.TextColor3 = Color3.new(1, 1, 1)
-	HealthLabel.Font = Enum.Font.Arcade
-	HealthLabel.TextSize = 14
-	HealthLabel.Parent = Panel
-
-	local function updateHealth()
-		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-			HealthLabel.Text = "HP: " .. math.floor(LocalPlayer.Character.Humanoid.Health)
-		end
-	end
-
-	LocalPlayer.CharacterAdded:Connect(function()
-		LocalPlayer.Character:WaitForChild("Humanoid").HealthChanged:Connect(updateHealth)
-	end)
-
-	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-		LocalPlayer.Character.Humanoid.HealthChanged:Connect(updateHealth)
-	end
 end
 
 return UILibrary
