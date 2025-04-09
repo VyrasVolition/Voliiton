@@ -1,4 +1,4 @@
--- UILibrary.lua (versão modular base)
+-- UILibrary.lua (versão modular atualizada)
 
 local UILibrary = {}
 UILibrary.__index = UILibrary
@@ -7,7 +7,6 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 
--- Cria janela principal
 function UILibrary:CreateWindow(title)
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "CustomUILib"
@@ -51,11 +50,13 @@ function UILibrary:CreateWindow(title)
 	self.CurrentTab = nil
 	self.TabButtons = TabButtons
 	self.ContentFrame = ContentFrame
+	self.MainFrame = MainFrame
+
+	self:CreatePlayerPanel()
 
 	return self
 end
 
--- Cria uma nova aba
 function UILibrary:CreateTab(name)
 	local TabButton = Instance.new("TextButton")
 	TabButton.Size = UDim2.new(1, 0, 0, 30)
@@ -92,7 +93,6 @@ function UILibrary:CreateTab(name)
 	return TabContent
 end
 
--- Cria um Toggle dentro de uma aba
 function UILibrary:CreateToggle(tabContent, text, callback)
 	local Toggle = Instance.new("TextButton")
 	Toggle.Size = UDim2.new(1, -10, 0, 30)
@@ -110,6 +110,71 @@ function UILibrary:CreateToggle(tabContent, text, callback)
 		Toggle.Text = (state and "[ ON  ] " or "[ OFF ] ") .. text
 		if callback then callback(state) end
 	end)
+end
+
+function UILibrary:CreateButton(tabContent, text, callback)
+	local Button = Instance.new("TextButton")
+	Button.Size = UDim2.new(1, -10, 0, 30)
+	Button.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren() * 32)
+	Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	Button.TextColor3 = Color3.new(1, 1, 1)
+	Button.Text = text
+	Button.Font = Enum.Font.Arcade
+	Button.TextSize = 16
+	Button.Parent = tabContent
+
+	Button.MouseButton1Click:Connect(function()
+		if callback then callback() end
+	end)
+end
+
+function UILibrary:CreatePlayerPanel()
+	local Panel = Instance.new("Frame")
+	Panel.Name = "PlayerInfo"
+	Panel.Size = UDim2.new(0, 120, 0, 120)
+	Panel.Position = UDim2.new(1, 10, 0, 30)
+	Panel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	Panel.Parent = self.MainFrame
+
+	local Avatar = Instance.new("ImageLabel")
+	Avatar.Size = UDim2.new(0, 60, 0, 60)
+	Avatar.Position = UDim2.new(0.5, -30, 0, 5)
+	Avatar.BackgroundTransparency = 1
+	Avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=420&height=420&format=png"
+	Avatar.Parent = Panel
+
+	local Username = Instance.new("TextLabel")
+	Username.Size = UDim2.new(1, 0, 0, 20)
+	Username.Position = UDim2.new(0, 0, 0, 70)
+	Username.BackgroundTransparency = 1
+	Username.Text = LocalPlayer.Name
+	Username.TextColor3 = Color3.new(1, 1, 1)
+	Username.Font = Enum.Font.Arcade
+	Username.TextSize = 14
+	Username.Parent = Panel
+
+	local HealthLabel = Instance.new("TextLabel")
+	HealthLabel.Size = UDim2.new(1, 0, 0, 20)
+	HealthLabel.Position = UDim2.new(0, 0, 0, 90)
+	HealthLabel.BackgroundTransparency = 1
+	HealthLabel.TextColor3 = Color3.new(1, 1, 1)
+	HealthLabel.Font = Enum.Font.Arcade
+	HealthLabel.TextSize = 14
+	HealthLabel.Parent = Panel
+
+	local function updateHealth()
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+			HealthLabel.Text = "HP: " .. math.floor(LocalPlayer.Character.Humanoid.Health)
+		end
+	end
+
+	LocalPlayer.CharacterAdded:Connect(function()
+		LocalPlayer.Character:WaitForChild("Humanoid").HealthChanged:Connect(updateHealth)
+	end)
+
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+		LocalPlayer.Character.Humanoid.HealthChanged:Connect(updateHealth)
+	end
 end
 
 return UILibrary
