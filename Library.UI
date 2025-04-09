@@ -1,4 +1,4 @@
--- UILibrary.lua (versão atualizada com infos e sistema de busca/spectate)
+-- UILibrary.lua (corrigido e aprimorado)
 
 local UILibrary = {}
 UILibrary.__index = UILibrary
@@ -8,8 +8,37 @@ local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
--- Cria janela principal
+-- Criação suave de Drag
+local function MakeDraggable(frame)
+	local dragging, dragInput, dragStart, startPos
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+	end)
+
+	RunService.RenderStepped:Connect(function()
+		if dragging and dragInput then
+			local delta = UserInputService:GetMouseLocation() - dragStart
+			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+end
+
+-- Cria a Janela
 function UILibrary:CreateWindow(title)
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "CustomUILib"
@@ -23,7 +52,16 @@ function UILibrary:CreateWindow(title)
 	MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
 	MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 	MainFrame.BorderSizePixel = 0
+	MainFrame.Active = true
 	MainFrame.Parent = ScreenGui
+	MakeDraggable(MainFrame)
+
+	-- Toggle UI com RightCtrl
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if input.KeyCode == Enum.KeyCode.RightControl then
+			MainFrame.Visible = not MainFrame.Visible
+		end
+	end)
 
 	-- Título
 	local TitleBar = Instance.new("TextLabel")
@@ -35,166 +73,53 @@ function UILibrary:CreateWindow(title)
 	TitleBar.TextSize = 20
 	TitleBar.Parent = MainFrame
 
-	-- Drag suave
-	local dragging, dragInput, dragStart, startPos
-	TitleBar.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = input.Position
-			startPos = MainFrame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then dragging = false end
-			end)
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-			local delta = input.Position - dragStart
-			MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		end
-	end)
-
-	-- Toggle de visibilidade com RightCtrl
-	UserInputService.InputBegan:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.RightControl then
-			MainFrame.Visible = not MainFrame.Visible
-		end
-	end)
-
-	-- Área lateral para infos
-	local InfoPanel = Instance.new("Frame")
-	InfoPanel.Size = UDim2.new(0, 160, 1, -30)
-	InfoPanel.Position = UDim2.new(0, 0, 0, 30)
-	InfoPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	InfoPanel.Parent = MainFrame
-
-	local function createLabel(parent, text, pos)
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, -10, 0, 20)
-		label.Position = UDim2.new(0, 5, 0, pos)
-		label.BackgroundTransparency = 1
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.Font = Enum.Font.Arcade
-		label.TextSize = 16
-		label.Text = text
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.Parent = parent
-		return label
-	end
-
-	local Avatar = Instance.new("ImageLabel")
-	Avatar.Size = UDim2.new(0, 60, 0, 60)
-	Avatar.Position = UDim2.new(0, 50, 0, 5)
-	Avatar.BackgroundTransparency = 1
-	Avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=420&height=420&format=png"
-	Avatar.Parent = InfoPanel
-
-	local UserLabel = createLabel(InfoPanel, "Name: "..LocalPlayer.Name, 70)
-	local IDLabel = createLabel(InfoPanel, "ID: "..LocalPlayer.UserId, 90)
-	local HPLabel = createLabel(InfoPanel, "HP: N/A", 110)
-	local TimerLabel = createLabel(InfoPanel, "Time: 00:00", 130)
-
-	local timer = 0
-	RunService.Stepped:Connect(function(_, dt)
-		timer += dt
-		local minutes = math.floor(timer / 60)
-		local seconds = math.floor(timer % 60)
-		TimerLabel.Text = string.format("Time: %02d:%02d", minutes, seconds)
-		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-			HPLabel.Text = "HP: "..math.floor(LocalPlayer.Character.Humanoid.Health)
-		end
-	end)
-
-	-- Info de player buscado
-	local SearchAvatar = Avatar:Clone()
-	SearchAvatar.Position = UDim2.new(0, 50, 0, 170)
-	SearchAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=1&width=420&height=420&format=png"
-	SearchAvatar.Parent = InfoPanel
-
-	local SearchName = createLabel(InfoPanel, "Target: Roblox", 240)
-	local SearchID = createLabel(InfoPanel, "ID: 1", 260)
-	local SearchHP = createLabel(InfoPanel, "HP: N/A", 280)
-
-	-- Campo de busca
-	local SearchBox = Instance.new("TextBox")
-	SearchBox.Size = UDim2.new(1, -10, 0, 25)
-	SearchBox.Position = UDim2.new(0, 5, 0, 310)
-	SearchBox.PlaceholderText = "Enter username"
-	SearchBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	SearchBox.TextColor3 = Color3.new(1, 1, 1)
-	SearchBox.Font = Enum.Font.Arcade
-	SearchBox.TextSize = 16
-	SearchBox.ClearTextOnFocus = false
-	SearchBox.Parent = InfoPanel
-
-	local Spectating = false
-	local SpectateTarget
-
-	SearchBox.FocusLost:Connect(function(enter)
-		if enter then
-			local query = SearchBox.Text:lower()
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= LocalPlayer and (plr.Name:lower():find(query) or (plr.DisplayName and plr.DisplayName:lower():find(query))) then
-					SearchName.Text = "Target: "..plr.Name
-					SearchID.Text = "ID: "..plr.UserId
-					SearchAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..plr.UserId.."&width=420&height=420&format=png"
-					SpectateTarget = plr
-					return
-				end
-		end
-	end)
-
-	-- Botão para spectate
-	local SpectateBtn = Instance.new("TextButton")
-	SpectateBtn.Size = UDim2.new(1, -10, 0, 25)
-	SpectateBtn.Position = UDim2.new(0, 5, 0, 340)
-	SpectateBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-	SpectateBtn.TextColor3 = Color3.new(1, 1, 1)
-	SpectateBtn.Font = Enum.Font.Arcade
-	SpectateBtn.TextSize = 16
-	SpectateBtn.Text = "Spectate: OFF"
-	SpectateBtn.Parent = InfoPanel
-
-	SpectateBtn.MouseButton1Click:Connect(function()
-		Spectating = not Spectating
-		SpectateBtn.Text = "Spectate: "..(Spectating and "ON" or "OFF")
-		if Spectating and SpectateTarget and SpectateTarget.Character then
-			workspace.CurrentCamera.CameraSubject = SpectateTarget.Character:FindFirstChild("Humanoid") or SpectateTarget.Character:FindFirstChildWhichIsA("BasePart")
-		else
-			workspace.CurrentCamera.CameraSubject = LocalPlayer.Character:FindFirstChild("Humanoid")
-		end
-	end)
-
-	-- Atualiza HP do espectado
-	RunService.Heartbeat:Connect(function()
-		if Spectating and SpectateTarget and SpectateTarget.Character and SpectateTarget.Character:FindFirstChild("Humanoid") then
-			SearchHP.Text = "HP: "..math.floor(SpectateTarget.Character.Humanoid.Health)
-		end
-	end)
-
-	-- Tabs e conteúdo
+	-- Área de Botões das Abas
 	local TabButtons = Instance.new("Frame")
-	TabButtons.Size = UDim2.new(0, 100, 1, -30)
-	TabButtons.Position = UDim2.new(0, 160, 0, 30)
-	TabButtons.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	TabButtons.Size = UDim2.new(0, 120, 1, -30)
+	TabButtons.Position = UDim2.new(0, 0, 0, 30)
+	TabButtons.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	TabButtons.ZIndex = 2
 	TabButtons.Parent = MainFrame
 
+	-- Área de Conteúdo
 	local ContentFrame = Instance.new("Frame")
-	ContentFrame.Size = UDim2.new(1, -260, 1, -30)
-	ContentFrame.Position = UDim2.new(0, 260, 0, 30)
+	ContentFrame.Size = UDim2.new(1, -250, 1, -30)
+	ContentFrame.Position = UDim2.new(0, 120, 0, 30)
 	ContentFrame.BackgroundTransparency = 1
 	ContentFrame.Name = "ContentFrame"
+	ContentFrame.ClipsDescendants = true
 	ContentFrame.Parent = MainFrame
 
+	-- Painel de Infos do Player
+	local InfoPanel = Instance.new("Frame")
+	InfoPanel.Size = UDim2.new(0, 130, 1, -30)
+	InfoPanel.Position = UDim2.new(1, -130, 0, 30)
+	InfoPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	InfoPanel.Parent = MainFrame
+
+	local InfoTitle = Instance.new("TextLabel")
+	InfoTitle.Size = UDim2.new(1, 0, 0, 20)
+	InfoTitle.Text = "PLAYER INFO"
+	InfoTitle.TextColor3 = Color3.new(1, 1, 1)
+	InfoTitle.BackgroundTransparency = 1
+	InfoTitle.Font = Enum.Font.Arcade
+	InfoTitle.TextSize = 14
+	InfoTitle.Parent = InfoPanel
+
+	-- Aqui vamos adicionar os dados do player e o sistema de busca depois
+
 	local self = setmetatable({}, UILibrary)
+	self.MainFrame = MainFrame
 	self.Tabs = {}
 	self.CurrentTab = nil
 	self.TabButtons = TabButtons
 	self.ContentFrame = ContentFrame
+	self.InfoPanel = InfoPanel
 
 	return self
 end
 
+-- Cria uma nova aba
 function UILibrary:CreateTab(name)
 	local TabButton = Instance.new("TextButton")
 	TabButton.Size = UDim2.new(1, 0, 0, 30)
@@ -229,25 +154,6 @@ function UILibrary:CreateTab(name)
 	end
 
 	return TabContent
-end
-
-function UILibrary:CreateToggle(tabContent, text, callback)
-	local Toggle = Instance.new("TextButton")
-	Toggle.Size = UDim2.new(1, -10, 0, 30)
-	Toggle.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren() * 32)
-	Toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-	Toggle.TextColor3 = Color3.new(1, 1, 1)
-	Toggle.Text = "[ OFF ] " .. text
-	Toggle.Font = Enum.Font.Arcade
-	Toggle.TextSize = 16
-	Toggle.Parent = tabContent
-
-	local state = false
-	Toggle.MouseButton1Click:Connect(function()
-		state = not state
-		Toggle.Text = (state and "[ ON  ] " or "[ OFF ] ") .. text
-		if callback then callback(state) end
-	end)
 end
 
 return UILibrary
