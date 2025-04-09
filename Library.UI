@@ -1,236 +1,133 @@
---[[
-	Custom Roblox UI Library (Modular & Expandable)
-	By: Azar (2025)
---]]
-
-local UILibrary = {}
-
--- Services
+--// Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
 
--- Variables
-local MainUI = Instance.new("ScreenGui")
-MainUI.Name = "AzarUILib"
-MainUI.ResetOnSpawn = false
-MainUI.Parent = gethui and gethui() or (syn and syn.protect_gui and syn.protect_gui(MainUI) or game.CoreGui)
+--// Main UI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "CustomUILib"
+ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 600, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+MainFrame.Size = UDim2.new(0, 520, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 MainFrame.BorderSizePixel = 0
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = MainUI
+MainFrame.Active = true
+MainFrame.Draggable = false
+MainFrame.Parent = ScreenGui
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 12)
-Corner.Parent = MainFrame
+local uiCorner = Instance.new("UICorner", MainFrame)
+uiCorner.CornerRadius = UDim.new(0, 10)
 
-local Tabs = Instance.new("Frame")
-Tabs.Name = "Tabs"
-Tabs.Size = UDim2.new(0, 120, 1, 0)
-Tabs.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-Tabs.BorderSizePixel = 0
-Tabs.Parent = MainFrame
+--// Title Bar
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "Custom UI"
+Title.Font = Enum.Font.Arcade
+Title.TextSize = 20
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Parent = MainFrame
 
-local UIList = Instance.new("UIListLayout")
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 4)
-UIList.Parent = Tabs
+--// Tab Buttons Frame
+local TabsFrame = Instance.new("Frame")
+TabsFrame.Size = UDim2.new(0, 120, 1, -30)
+TabsFrame.Position = UDim2.new(0, 0, 0, 30)
+TabsFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TabsFrame.BorderSizePixel = 0
+TabsFrame.Parent = MainFrame
 
-local Content = Instance.new("Frame")
-Content.Name = "Content"
-Content.Size = UDim2.new(1, -280, 1, 0)
-Content.Position = UDim2.new(0, 120, 0, 0)
-Content.BackgroundTransparency = 1
-Content.ClipsDescendants = true
-Content.Parent = MainFrame
+local tabCorner = Instance.new("UICorner", TabsFrame)
+tabCorner.CornerRadius = UDim.new(0, 8)
 
--- Player Info Panel (Fixed Sidebar)
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+--// Content Area Frame
+local ContentArea = Instance.new("Frame")
+ContentArea.Name = "ContentArea"
+ContentArea.Size = UDim2.new(1, -280, 1, -30)
+ContentArea.Position = UDim2.new(0, 120, 0, 30)
+ContentArea.BackgroundTransparency = 1
+ContentArea.Parent = MainFrame
 
-local PlayerInfoPanel = Instance.new("Frame")
-PlayerInfoPanel.Name = "PlayerInfoPanel"
-PlayerInfoPanel.Size = UDim2.new(0, 160, 1, 0)
-PlayerInfoPanel.Position = UDim2.new(1, -160, 0, 0)
-PlayerInfoPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
-PlayerInfoPanel.BorderSizePixel = 0
-PlayerInfoPanel.Parent = MainFrame
-
-local infoCorner = Instance.new("UICorner")
-infoCorner.CornerRadius = UDim.new(0, 8)
-infoCorner.Parent = PlayerInfoPanel
-
-local avatar = Instance.new("ImageLabel")
-avatar.Size = UDim2.new(0, 64, 0, 64)
-avatar.Position = UDim2.new(0.5, -32, 0, 10)
-avatar.BackgroundTransparency = 1
-avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=420&height=420&format=png"
-avatar.Parent = PlayerInfoPanel
-
-local nameLabel = Instance.new("TextLabel")
-nameLabel.Size = UDim2.new(1, 0, 0, 20)
-nameLabel.Position = UDim2.new(0, 0, 0, 80)
-nameLabel.BackgroundTransparency = 1
-nameLabel.Text = player.Name
-nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-nameLabel.TextSize = 16
-nameLabel.Font = Enum.Font.Arcade
-nameLabel.Parent = PlayerInfoPanel
-
-local idLabel = Instance.new("TextLabel")
-idLabel.Size = UDim2.new(1, 0, 0, 18)
-idLabel.Position = UDim2.new(0, 0, 0, 100)
-idLabel.BackgroundTransparency = 1
-idLabel.Text = "ID: "..player.UserId
-idLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-idLabel.TextSize = 14
-idLabel.Font = Enum.Font.Arcade
-idLabel.Parent = PlayerInfoPanel
-
-local healthLabel = Instance.new("TextLabel")
-healthLabel.Size = UDim2.new(1, 0, 0, 18)
-healthLabel.Position = UDim2.new(0, 0, 0, 120)
-healthLabel.BackgroundTransparency = 1
-healthLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-healthLabel.TextSize = 14
-healthLabel.Font = Enum.Font.Arcade
-healthLabel.Parent = PlayerInfoPanel
-
-local timeLabel = Instance.new("TextLabel")
-timeLabel.Size = UDim2.new(1, 0, 0, 18)
-timeLabel.Position = UDim2.new(0, 0, 0, 140)
-timeLabel.BackgroundTransparency = 1
-timeLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
-timeLabel.TextSize = 14
-timeLabel.Font = Enum.Font.Arcade
-timeLabel.Parent = PlayerInfoPanel
-
-local sessionStart = tick()
-local currentHumanoid = humanoid
-player.CharacterAdded:Connect(function(char)
-	currentHumanoid = char:WaitForChild("Humanoid")
-end)
-
-task.spawn(function()
-	while true do
-		if currentHumanoid and currentHumanoid.Parent then
-			healthLabel.Text = "HP: "..math.floor(currentHumanoid.Health).."/"..math.floor(currentHumanoid.MaxHealth)
-		else
-			healthLabel.Text = "HP: ???"
-		end
-
-		local elapsed = tick() - sessionStart
-		timeLabel.Text = string.format("Time: %02d:%02d", math.floor(elapsed/60), math.floor(elapsed%60))
-		task.wait(0.1)
+--// Toggle UI with K
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.K then
+		MainFrame.Visible = not MainFrame.Visible
 	end
 end)
 
--- Player Search and Spectate
-local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(1, -10, 0, 20)
-searchBox.Position = UDim2.new(0, 5, 0, 170)
-searchBox.PlaceholderText = "Search player..."
-searchBox.Text = ""
-searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-searchBox.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
-searchBox.TextSize = 14
-searchBox.Font = Enum.Font.Arcade
-searchBox.Parent = PlayerInfoPanel
+--// Drag System
+local dragging, dragInput, dragStart, startPos
 
-local targetAvatar = avatar:Clone()
-targetAvatar.Position = UDim2.new(0.5, -32, 0, 200)
-targetAvatar.Image = ""
-targetAvatar.Parent = PlayerInfoPanel
+Title.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
 
-local targetName = nameLabel:Clone()
-targetName.Position = UDim2.new(0, 0, 0, 270)
-targetName.Text = "Username"
-targetName.Parent = PlayerInfoPanel
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
 
-local targetId = idLabel:Clone()
-targetId.Position = UDim2.new(0, 0, 0, 290)
-targetId.Text = "ID: ---"
-targetId.Parent = PlayerInfoPanel
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
 
-local targetHp = healthLabel:Clone()
-targetHp.Position = UDim2.new(0, 0, 0, 310)
-targetHp.Text = "HP: ---"
-targetHp.Parent = PlayerInfoPanel
+RunService.RenderStepped:Connect(function()
+	if dragging and dragInput then
+		local delta = dragInput.Position - dragStart
+		MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
 
-local toggleSpectate = Instance.new("TextButton")
-toggleSpectate.Size = UDim2.new(0.8, 0, 0, 20)
-toggleSpectate.Position = UDim2.new(0.1, 0, 0, 335)
-toggleSpectate.BackgroundColor3 = Color3.fromRGB(58, 48, 204)
-toggleSpectate.TextColor3 = Color3.new(1, 1, 1)
-toggleSpectate.Text = "Spectate"
-toggleSpectate.Font = Enum.Font.Arcade
-toggleSpectate.TextSize = 14
-toggleSpectate.Parent = PlayerInfoPanel
+--// Example Tab and Button
+local function CreateTab(name)
+	local Button = Instance.new("TextButton")
+	Button.Size = UDim2.new(1, 0, 0, 30)
+	Button.Text = name
+	Button.Font = Enum.Font.Arcade
+	Button.TextSize = 16
+	Button.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+	Button.TextColor3 = Color3.new(1, 1, 1)
+	Button.Parent = TabsFrame
 
-local currentTarget = nil
-local isSpectating = false
-local camera = workspace.CurrentCamera
+	local TabFrame = Instance.new("Frame")
+	TabFrame.Name = name
+	TabFrame.Size = UDim2.new(1, 0, 1, 0)
+	TabFrame.BackgroundTransparency = 1
+	TabFrame.Visible = false
+	TabFrame.Parent = ContentArea
 
-local function updateTargetInfo(targetPlayer)
-	if not targetPlayer then return end
-	local character = targetPlayer.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	targetAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..targetPlayer.UserId.."&width=420&height=420&format=png"
-	targetName.Text = targetPlayer.Name
-	targetId.Text = "ID: "..targetPlayer.UserId
-	targetHp.Text = humanoid and ("HP: "..math.floor(humanoid.Health).."/"..math.floor(humanoid.MaxHealth)) or "HP: 0/0"
+	Button.MouseButton1Click:Connect(function()
+		for _, tab in pairs(ContentArea:GetChildren()) do
+			if tab:IsA("Frame") then
+				tab.Visible = false
+			end
+		end
+		TabFrame.Visible = true
+	end)
+
+	return TabFrame
 end
 
-RunService.Heartbeat:Connect(function()
-	if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("Humanoid") then
-		targetHp.Text = "HP: "..math.floor(currentTarget.Character.Humanoid.Health).."/"..math.floor(currentTarget.Character.Humanoid.MaxHealth)
-	end
-end)
-
-searchBox.FocusLost:Connect(function()
-	local input = searchBox.Text:lower()
-	for _, p in ipairs(game.Players:GetPlayers()) do
-		if p ~= player and (p.Name:lower():find(input) or (p.DisplayName and p.DisplayName:lower():find(input))) then
-			currentTarget = p
-			updateTargetInfo(p)
-			break
-		end
-	end
-end)
-
-toggleSpectate.MouseButton1Click:Connect(function()
-	if not currentTarget then return end
-	isSpectating = not isSpectating
-	toggleSpectate.Text = isSpectating and "Unspectate" or "Spectate"
-	camera.CameraSubject = isSpectating and currentTarget.Character:FindFirstChild("Head") or player.Character:FindFirstChild("Head")
-end)
-
-game.Players.PlayerRemoving:Connect(function(leaving)
-	if leaving == currentTarget then
-		currentTarget = nil
-		isSpectating = false
-		toggleSpectate.Text = "Spectate"
-		camera.CameraSubject = player.Character:FindFirstChild("Head")
-		targetAvatar.Image = ""
-		targetName.Text = "Username"
-		targetId.Text = "ID: ---"
-		targetHp.Text = "HP: ---"
-	end
-end)
-
--- Toggle UI with K
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if not gpe and input.KeyCode == Enum.KeyCode.K then
-		MainUI.Enabled = not MainUI.Enabled
-	end
-end)
-
-return UILibrary
+-- Example usage
+local exampleTab = CreateTab("ESP")
+local exampleButton = Instance.new("TextButton")
+exampleButton.Size = UDim2.new(0, 100, 0, 30)
+exampleButton.Position = UDim2.new(0, 10, 0, 10)
+exampleButton.Text = "Enable ESP"
+exampleButton.Font = Enum.Font.Arcade
+exampleButton.TextSize = 14
+exampleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+exampleButton.TextColor3 = Color3.new(1, 1, 1)
+exampleButton.Parent = exampleTab
