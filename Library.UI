@@ -1,0 +1,115 @@
+-- UILibrary.lua (versão modular base)
+
+local UILibrary = {}
+UILibrary.__index = UILibrary
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+
+-- Cria janela principal
+function UILibrary:CreateWindow(title)
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name = "CustomUILib"
+	ScreenGui.ResetOnSpawn = false
+	ScreenGui.Parent = game.CoreGui
+
+	local MainFrame = Instance.new("Frame")
+	MainFrame.Name = "MainFrame"
+	MainFrame.Size = UDim2.new(0, 600, 0, 400)
+	MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
+	MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	MainFrame.BorderSizePixel = 0
+	MainFrame.Active = true
+	MainFrame.Draggable = true
+	MainFrame.Parent = ScreenGui
+
+	local TitleBar = Instance.new("TextLabel")
+	TitleBar.Size = UDim2.new(1, 0, 0, 30)
+	TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	TitleBar.Text = title or "Window"
+	TitleBar.TextColor3 = Color3.new(1, 1, 1)
+	TitleBar.Font = Enum.Font.Arcade
+	TitleBar.TextSize = 20
+	TitleBar.Parent = MainFrame
+
+	local TabButtons = Instance.new("Frame")
+	TabButtons.Size = UDim2.new(0, 120, 1, -30)
+	TabButtons.Position = UDim2.new(0, 0, 0, 30)
+	TabButtons.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	TabButtons.Parent = MainFrame
+
+	local ContentFrame = Instance.new("Frame")
+	ContentFrame.Size = UDim2.new(1, -120, 1, -30)
+	ContentFrame.Position = UDim2.new(0, 120, 0, 30)
+	ContentFrame.BackgroundTransparency = 1
+	ContentFrame.Name = "ContentFrame"
+	ContentFrame.Parent = MainFrame
+
+	local self = setmetatable({}, UILibrary)
+	self.Tabs = {}
+	self.CurrentTab = nil
+	self.TabButtons = TabButtons
+	self.ContentFrame = ContentFrame
+
+	return self
+end
+
+-- Cria uma nova aba
+function UILibrary:CreateTab(name)
+	local TabButton = Instance.new("TextButton")
+	TabButton.Size = UDim2.new(1, 0, 0, 30)
+	TabButton.Text = name
+	TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	TabButton.TextColor3 = Color3.new(1, 1, 1)
+	TabButton.Font = Enum.Font.Arcade
+	TabButton.TextSize = 18
+	TabButton.Parent = self.TabButtons
+
+	local TabContent = Instance.new("ScrollingFrame")
+	TabContent.Size = UDim2.new(1, 0, 1, 0)
+	TabContent.CanvasSize = UDim2.new(0, 0, 10, 0)
+	TabContent.BackgroundTransparency = 1
+	TabContent.Visible = false
+	TabContent.ScrollBarThickness = 4
+	TabContent.Parent = self.ContentFrame
+
+	TabButton.MouseButton1Click:Connect(function()
+		if self.CurrentTab then
+			self.CurrentTab.Visible = false
+		end
+		self.CurrentTab = TabContent
+		TabContent.Visible = true
+	end)
+
+	self.Tabs[name] = { Button = TabButton, Content = TabContent }
+
+	if not self.CurrentTab then
+		self.CurrentTab = TabContent
+		TabContent.Visible = true
+	end
+
+	return TabContent
+end
+
+-- Cria um Toggle dentro de uma aba
+function UILibrary:CreateToggle(tabContent, text, callback)
+	local Toggle = Instance.new("TextButton")
+	Toggle.Size = UDim2.new(1, -10, 0, 30)
+	Toggle.Position = UDim2.new(0, 5, 0, #tabContent:GetChildren() * 32)
+	Toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	Toggle.TextColor3 = Color3.new(1, 1, 1)
+	Toggle.Text = "[ OFF ] " .. text
+	Toggle.Font = Enum.Font.Arcade
+	Toggle.TextSize = 16
+	Toggle.Parent = tabContent
+
+	local state = false
+	Toggle.MouseButton1Click:Connect(function()
+		state = not state
+		Toggle.Text = (state and "[ ON  ] " or "[ OFF ] ") .. text
+		if callback then callback(state) end
+	end)
+end
+
+return UILibrary
